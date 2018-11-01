@@ -2,7 +2,7 @@
 """
 Created on Thu Mar 22 22:26:22 2018
 
-@author: dell
+@author: Christina_Faye
 """
 
 import numpy as np
@@ -93,8 +93,9 @@ class MeanVariance:
         q=matrix(0.0,(dm,1),'d')
     
 #to restrict weights>=0:
-        G=spmatrix(-1.0,range(dm),range(dm))
-       #G=matrix(0.0,(1,dm),'d')
+        #G=spmatrix(-1.0,range(dm),range(dm))
+#if you allow short selling, please use:
+        G=matrix(0.0,(1,dm),'d')
         h=matrix(0.0,(dm,1))  
         
         mu=np.array(self.returns.mean()-rf)

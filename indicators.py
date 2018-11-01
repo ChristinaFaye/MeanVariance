@@ -2,7 +2,7 @@
 """
 Created on Tue Mar 13 00:14:05 2018
 
-@author: dell
+@author: Christina_Faye
 """
 from scipy.stats import norm
 

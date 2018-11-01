@@ -6,6 +6,7 @@ Created on Tue Mar 13 00:11:17 2018
 """
 
 from WindPy import*
+w.start()
 import pandas as pd
 
 def get_data(stock,field,startdate,enddate):
