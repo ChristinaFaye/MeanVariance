@@ -7,10 +7,10 @@ Created on Thu Mar 22 22:26:22 2018
 
 import numpy as np
 import pandas as pd
-#from cvxopt import matrix,solvers,spmatrix
 from winddata import get_data
 from get_return import log_return
 import matplotlib.pyplot as plt
+import math
 
 #solvers.options['show_progress'] = False
 
@@ -46,11 +46,12 @@ class MeanVariance:
         return v[0,0]
          
     def frontierCurve(self):
-        goals=[x/5000000 for x in range(-4000,3000)]
+        goals=[x/500000 for x in range(-4000,3000)]
         variance=[]
         for i in goals:
             w=self.weight(i)
-            variance.append(self.calVar(w))
+            sigma=math.sqrt(self.calVar(w))
+            variance.append(sigma)
           
         plt.plot(variance,goals,'r-')
         plt.xlabel("sigma")
@@ -69,8 +70,35 @@ class MeanVariance:
              
         plt.plot(var2,exmean,'o')
         plt.show()
+    
+    def weight_rf(self,goalRet,rf):
+        covs=np.array(self.returns.cov())
+        means=np.array(self.returns.mean())-rf
+        n=len(means)
+        L1=np.append(covs,means.reshape((n,1)),1)
+        L2=np.append([means],np.zeros((1,1)),1)
+        L=np.append(L1,L2,0)
+        B=np.zeros((n+1,1))
+        B[-1,:]=goalRet-rf
+        X=np.linalg.solve(L,B)
+        w=pd.DataFrame(X[0:n,:],index=self.returns.columns,columns=['weight'])
+        return w       
+
+    def CML(self,rf):
+        goals=[x/500000 for x in range(40,3000)]
+        variance=[]
+        for i in goals:
+            w=self.weight_rf(i,rf)
+            sigma=math.sqrt(self.calVar(w))
+            variance.append(sigma)
+          
+        plt.plot(variance,goals,'r-')
+        plt.xlabel("sigma")
+        plt.ylabel("Expected Return")
+
   
 def main():
+    #stock='600000.SH,600004.SH'
     stock='600000.SH,600004.SH,600006.SH,600007.SH,600008.SH'
     field='close'
     startdate='2017-1-1'
@@ -78,15 +106,19 @@ def main():
     fm=get_data(stock,field,startdate,enddate)
     r=log_return(fm)
     mu0=0.0001
+    rf=0.000083
     varMinimizer=MeanVariance(r)
     w=varMinimizer.weight(mu0)
     mu=varMinimizer.meanRet(w)
     vol=varMinimizer.calVar(w)
+    wrf=varMinimizer.weight_rf(mu0,rf)
     print(w)
     print('mu=',mu[0])
     print('sigma=',vol)
-    varMinimizer.frontierCurve()
-    varMinimizer.random_portfolios()
+    print(wrf)
+    #varMinimizer.frontierCurve()
+    #varMinimizer.random_portfolios()
+    #varMinimizer.CML(rf)
 
 main()
 

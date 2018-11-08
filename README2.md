@@ -42,3 +42,22 @@ $$
 $$
 \bm{LX=B}
 $$
+
+据此，我们可以利用numpy的linalg.solve来求解方程组，具体编程如下：
+```python
+    def weight(self,goalRet=0):
+        covs=np.array(self.returns.cov())
+        means=np.array(self.returns.mean())
+        n=len(means)
+        L1=np.append(np.append(covs,means.reshape((n,1)),1),np.ones((n,1)),1)
+        L2=np.append(np.append([means],np.ones((1,n)),0),np.zeros((2,2)),1)
+        L=np.append(L1,L2,0)
+        B=np.zeros((n+2,1))
+        B[-1,:]=1
+        B[-2,:]=goalRet
+        X=np.linalg.solve(L,B)
+        w=pd.DataFrame(X[0:n,:],index=self.returns.columns,columns=['weight'])
+        return w
+```
+可以到我github的weight2分支上进行下载或fork~
+https://github.com/ChristinaFaye/MeanVariance/tree/weight2
