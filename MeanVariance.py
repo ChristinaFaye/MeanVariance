@@ -27,8 +27,8 @@ class MeanVariance:
         q=matrix(0.0,(dm,1),'d')
     
 #to restrict weights>=0:
-        G=spmatrix(-1.0,range(dm),range(dm))
-       #G=matrix(0.0,(1,dm),'d')
+        #G=spmatrix(-1.0,range(dm),range(dm))
+        G=matrix(0.0,(dm,dm),'d')
         h=matrix(0.0,(dm,1))
     
 #restriction:mu0=E(rp),w1+w2+...+wn=1
@@ -95,7 +95,7 @@ class MeanVariance:
 #to restrict weights>=0:
         #G=spmatrix(-1.0,range(dm),range(dm))
 #if you allow short selling, please use:
-        G=matrix(0.0,(1,dm),'d')
+        G=matrix(0.0,(dm,dm),'d')
         h=matrix(0.0,(dm,1))  
         
         mu=np.array(self.returns.mean()-rf)
@@ -123,6 +123,7 @@ def main():
     fm=get_data(stock,field,startdate,enddate)
     r=log_return(fm)
     mu0=0.0001
+    rf=0.000083
     varMinimizer=MeanVariance(r)
     w=varMinimizer.weight(mu0)
     mu=varMinimizer.meanRet(w)
@@ -130,8 +131,10 @@ def main():
     print(w)
     print('mu=',mu[0])
     print('sigma=',vol)
-    varMinimizer.frontierCurve()
-    varMinimizer.random_portfolios()
+    wrf=varMinimizer.weight_rf(mu0,rf)
+    print(wrf)
+    #varMinimizer.frontierCurve()
+    #varMinimizer.random_portfolios()
 
 main()
 
