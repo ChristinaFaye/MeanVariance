@@ -45,7 +45,7 @@ class MeanVariance:
         v=np.dot(np.dot(w.T,sigma),w)
         return v[0,0]
          
-    def frontierCurve(self,lower=-400,upper=3000):
+    def frontierCurve(self,lower,upper):
         goals=pd.DataFrame([x/500000 for x in range(lower,upper)],columns=["mu0"])
         goals["sigma"]=0
         for i in range(len(goals)):
@@ -58,7 +58,7 @@ class MeanVariance:
         index=goals["sigma"].idxmin()
         mu0=goals.loc[index,'mu0']
         sigma=goals.loc[index,'sigma']
-        print('minimum variance point:\n')
+        print('minimum variance portfolio:')
         print('mu0=',mu0)
         print('sigma=',sigma)
         print(self.weight(goals.loc[index,"mu0"]))
@@ -71,19 +71,35 @@ class MeanVariance:
         plt.xlabel("sigma")
         plt.ylabel("Expected Return")
         return efc
-
-
     
-    def random_portfolios(self):
+
+#rf:to calculate sharp ratio
+    def random_portfolios(self,rf):
         exmean=[]
         var2=[]
-        for i in range(1,500):
-            w=np.random.rand(self.returns.columns.size)
+        sharp=[]
+        for i in range(1,5000):
+            w=np.random.uniform(-1,1,self.returns.columns.size)
             weights=pd.DataFrame(w/sum(w))
-            exmean.append(self.meanRet(weights))
-            var2.append(math.sqrt(self.calVar(weights)))             
-        plt.plot(var2,exmean,'o',markersize=1.0)
+            mu0=self.meanRet(weights)
+            sigma=math.sqrt(self.calVar(weights))
+            sharp_ratio=(mu0-rf)/sigma
+            exmean.append(mu0)
+            var2.append(sigma)
+            sharp.append(sharp_ratio)            
+       
+        n_portfolios=pd.DataFrame(exmean,columns=['mu0'])
+        n_portfolios['sigma']=var2
+        n_portfolios['sharp']=sharp
+# to control sigma in a certain range
+        limits=3*n_portfolios['sigma'].min()
+        n_portfolios=n_portfolios[n_portfolios['sigma']<limits]
         
+        plt.grid(True)
+        plt.scatter(n_portfolios['sigma'],n_portfolios['mu0'],s=1.0,c=n_portfolios['sharp'],marker='o')
+        plt.colorbar(label = 'Sharpe Ratio')
+    
+        return n_portfolios        
     
     def weight_rf(self,goalRet,rf):
         covs=np.array(self.returns.cov())
@@ -131,6 +147,7 @@ class MeanVariance:
         else:
             print("Please adjust lower and upper limits of frontier curve!")
             
+            
   
 def main():
     #stock='600000.SH,600004.SH'
@@ -148,13 +165,15 @@ def main():
     mu=varMinimizer.meanRet(w)
     vol=varMinimizer.calVar(w)
     wrf=varMinimizer.weight_rf(mu0,rf)
-    print('when ')
-    print('mu=',mu[0])
+    print('when mu=',mu[0],':')
     print('sigma=',vol)
     print(w)
-    print(wrf)
-    varMinimizer.random_portfolios()
-    efc=varMinimizer.frontierCurve(-400,3000)
+    print('when risk-free asset is added:\n',wrf)
+    n_p=varMinimizer.random_portfolios(rf)
+    
+    lower=int(n_p['mu0'].min()*500000)
+    upper=int(n_p['mu0'].max()*500000)
+    efc=varMinimizer.frontierCurve(lower,upper)
     goals=varMinimizer.CML(rf)
     varMinimizer.Mpoint(efc,goals)
 
