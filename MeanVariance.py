@@ -45,17 +45,32 @@ class MeanVariance:
         v=np.dot(np.dot(w.T,sigma),w)
         return v[0,0]
          
-    def frontierCurve(self):
-        goals=[x/500000 for x in range(-4000,3000)]
-        variance=[]
-        for i in goals:
-            w=self.weight(i)
+    def frontierCurve(self,lower=-400,upper=3000):
+        goals=pd.DataFrame([x/500000 for x in range(lower,upper)],columns=["mu0"])
+        goals["sigma"]=0
+        for i in range(len(goals)):
+            mu0=goals.loc[i,"mu0"]
+            w=self.weight(mu0)
             sigma=math.sqrt(self.calVar(w))
-            variance.append(sigma)
+            goals.loc[i,"sigma"]=sigma
+        
+        #find the point with minimum variance
+        index=goals["sigma"].idxmin()
+        mu0=goals.loc[index,'mu0']
+        sigma=goals.loc[index,'sigma']
+        print('minimum variance point:\n')
+        print('mu0=',mu0)
+        print('sigma=',sigma)
+        print(self.weight(goals.loc[index,"mu0"]))
+        #find effective frontier curve
+        efc=goals[index:]
           
-        plt.plot(variance,goals,'r-')
+        plt.plot(goals["sigma"],goals["mu0"],'b-')
+        plt.plot(efc["sigma"],efc["mu0"],'r-',linewidth=2)
+        plt.plot(efc.iloc[0,1],efc.iloc[0,0],'r*',markersize=15.0)
         plt.xlabel("sigma")
         plt.ylabel("Expected Return")
+        return efc
 
 
     
@@ -66,10 +81,9 @@ class MeanVariance:
             w=np.random.rand(self.returns.columns.size)
             weights=pd.DataFrame(w/sum(w))
             exmean.append(self.meanRet(weights))
-            var2.append(self.calVar(weights))
-             
-        plt.plot(var2,exmean,'o')
-        plt.show()
+            var2.append(math.sqrt(self.calVar(weights)))             
+        plt.plot(var2,exmean,'o',markersize=1.0)
+        
     
     def weight_rf(self,goalRet,rf):
         covs=np.array(self.returns.cov())
@@ -85,24 +99,46 @@ class MeanVariance:
         return w       
 
     def CML(self,rf):
-        goals=[x/500000 for x in range(40,3000)]
-        variance=[]
-        for i in goals:
-            w=self.weight_rf(i,rf)
+        goals=pd.DataFrame([x/500000 for x in range(int(rf*500000),3000)],columns=['mu0'])
+        goals['sigma']=0
+        for i in range(len(goals)):
+            mu=goals.loc[i,'mu0']
+            w=self.weight_rf(mu,rf)
             sigma=math.sqrt(self.calVar(w))
-            variance.append(sigma)
-          
-        plt.plot(variance,goals,'r-')
+            goals.loc[i,'sigma']=sigma
+        
+        plt.plot(goals['sigma'],goals['mu0'],'r-')
         plt.xlabel("sigma")
         plt.ylabel("Expected Return")
-
+        
+        return goals
+    
+    def Mpoint(self,efc,goals):
+        EFC=pd.DataFrame(efc['sigma'].values,index=efc['mu0'],columns=['sigma'])
+        CML=pd.DataFrame(goals['sigma'].values,index=goals['mu0'],columns=['sigma'])
+        diff=abs(CML-EFC).dropna()
+        print("The efficient portfolio M:")
+        Vdiff=diff.min().values[0]
+        if Vdiff<=0.000001:
+            mu0=diff.idxmin().values[0]
+            weights=self.weight(mu0)
+            sigma=math.sqrt(self.calVar(weights))
+            print("mu0=",mu0)
+            print("sigma=",sigma)
+            print(weights)
+            print("difference:",Vdiff)
+            plt.plot(sigma,mu0,'k*',markersize=15.0)
+        else:
+            print("Please adjust lower and upper limits of frontier curve!")
+            
   
 def main():
     #stock='600000.SH,600004.SH'
-    stock='600000.SH,600004.SH,600006.SH,600007.SH,600008.SH'
+    #stock='600004.SH,600015.SH,600023.SH,600033.SH,600183.SH'
+    stock='601919.SH,000063.SZ,002508.SZ,600016.SH,601012.SH,600585.SH'
     field='close'
-    startdate='2017-1-1'
-    enddate='2018-1-1'
+    startdate='2014-1-1'
+    enddate='2015-1-1'
     fm=get_data(stock,field,startdate,enddate)
     r=log_return(fm)
     mu0=0.0001
@@ -112,13 +148,15 @@ def main():
     mu=varMinimizer.meanRet(w)
     vol=varMinimizer.calVar(w)
     wrf=varMinimizer.weight_rf(mu0,rf)
-    print(w)
+    print('when ')
     print('mu=',mu[0])
     print('sigma=',vol)
+    print(w)
     print(wrf)
-    #varMinimizer.frontierCurve()
-    #varMinimizer.random_portfolios()
-    #varMinimizer.CML(rf)
+    varMinimizer.random_portfolios()
+    efc=varMinimizer.frontierCurve(-400,3000)
+    goals=varMinimizer.CML(rf)
+    varMinimizer.Mpoint(efc,goals)
 
 main()
 
